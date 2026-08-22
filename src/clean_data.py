@@ -1,9 +1,24 @@
 import os
 import pandas as pd
 
-def clean_data(df):
+def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """
     Applies the data cleaning rules for RFM analytics.
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The raw ingested transaction data.
+        
+    Returns
+    -------
+    pd.DataFrame
+        The cleaned, cohort-filtered, and strongly-typed transaction dataset.
+        
+    Raises
+    ------
+    AssertionError
+        If the cleaning pipeline drops 100% of the rows.
     """
     df_clean = df.copy()
     
@@ -40,10 +55,27 @@ def clean_data(df):
     df_clean = df_clean.sort_values(by=['customerid', 'invoicedate', 'invoiceno', 'stockcode'])
     df_clean = df_clean.reset_index(drop=True)
     
+    # 8. Data Validation Assertion
+    assert len(df_clean) > 0, "FATAL ERROR: Data cleaning pipeline removed all rows."
+    
     return df_clean
 
-def generate_summary(df_raw, df_clean):
-    """Generates a before/after summary DataFrame."""
+def generate_summary(df_raw: pd.DataFrame, df_clean: pd.DataFrame) -> pd.DataFrame:
+    """
+    Generates a before/after summary DataFrame for QA reporting.
+    
+    Parameters
+    ----------
+    df_raw : pd.DataFrame
+        The raw ingested dataset.
+    df_clean : pd.DataFrame
+        The cleaned dataset.
+        
+    Returns
+    -------
+    pd.DataFrame
+        A summary report mapping high-level changes in row counts, customers, and revenue.
+    """
     raw_amount = (df_raw['quantity'] * df_raw['unitprice']).sum()
     
     summary = {

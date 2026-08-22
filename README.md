@@ -38,7 +38,7 @@ Calculations were pushed down to a SQLite database (`database/valuelens.db`) to 
 *   **Monetary:** Sum of `Quantity * UnitPrice`.
 
 ## RFM Scoring
-Customers were ranked on a strict 1-to-3 scale (1 = Worst, 3 = Best) utilizing the 33rd and 66th percentiles of the database to ensure mathematically even distributions.
+Customers were ranked on a strict 1-to-5 quintile scale (1 = Worst, 5 = Best) utilizing the `NTILE(5)` window function to ensure mathematically even distributions.
 
 ## Customer Segmentation
 RFM strings (e.g., '333') were mapped to actionable business segments:
