@@ -1,87 +1,118 @@
-# ValueLens — Customer Value Segmentation & Retention Analytics
+# ValueLens: Customer Segmentation & Retention Analytics
+
+![Dashboard Preview](reports/dashboard/figures/01_segment_dist.png)
 
 ## Business Problem
-In many businesses, customer retention and maximizing customer lifetime value (CLV) are critical to long-term profitability. However, companies often struggle to differentiate between high-value, at-risk, and churned customers, leading to inefficient marketing spend and generic retention strategies. The challenge is to identify customer segments based on their behavior and value, and to deploy targeted strategies to increase retention and overall profitability.
+The business suffers from "spray-and-pray" marketing execution. Without a data-driven understanding of customer churn risk and lifetime value, the company wastes margin by offering blanket discounts to VIPs who would buy at full price, while simultaneously burning paid retargeting budgets on permanently churned accounts. The business requires a rigorous analytical framework to identify capital exposure and deploy marketing budget with maximum incremental ROI.
 
-## Project Objective
-**ValueLens** aims to analyze customer transaction data to segment the customer base using RFM (Recency, Frequency, Monetary) analysis and predictive modeling. The primary objectives are to:
-1. Clean and transform raw transaction data into a robust analytical dataset.
-2. Segment customers based on their purchasing behavior.
-3. Identify at-risk customers and predict potential churn.
-4. Provide actionable, data-driven recommendations to improve customer retention and maximize lifetime value.
-5. Present the findings through professional visualizations and a structured presentation suitable for a business audience.
+## Why RFM?
+Demographics (age, gender, location) do not buy products; **behavior** does. Recency, Frequency, and Monetary (RFM) analysis is a mathematically robust heuristic that evaluates exact purchasing behavior. By understanding exactly when a customer last bought, how often they buy, and how much they spend, the business can accurately diagnose the customer's lifecycle state (e.g., active, at-risk, churned).
+
+## Key Questions
+1. How deeply is the company's revenue concentrated in its top buyers?
+2. Which historically valuable customers are actively slipping into churn?
+3. What is the financial exposure (capital at risk) if these customers are not rescued?
+4. How do we mathematically prove the ROI of a retention campaign using A/B testing?
+
+## Dataset
+The project utilizes the widely referenced **UCI Online Retail Dataset**, representing a UK-based wholesale B2B retail company spanning December 2010 through December 2011. The raw dataset contains ~541,000 transaction rows.
 
 ## Methodology
-The project will follow a structured data science workflow:
-1. **Data Ingestion & Cleaning**: Processing raw transaction data, handling missing values, anomalies, and ensuring data quality using Python and SQL.
-2. **Exploratory Data Analysis (EDA)**: Uncovering patterns, trends, and initial insights using pandas, matplotlib, and seaborn.
-3. **Customer Segmentation**: Implementing RFM analysis and clustering techniques (e.g., K-Means via scikit-learn) to group customers based on their value.
-4. **Predictive Analytics**: Developing models to predict customer churn or future value.
-5. **Business Insights Generation**: Translating analytical results into strategic business recommendations.
-6. **Reporting**: Creating clear, automated reports and a presentation to communicate findings to stakeholders.
+This project executes a professional end-to-end Decision Science pipeline:
+1. **Data Engineering:** Automated ingestion, cleaning, and SQLite database creation.
+2. **SQL Analytics:** Fast, scalable extraction of raw Recency, Frequency, and Monetary metrics.
+3. **Statistical Scoring:** Percentile-based heuristic scoring (1-3 scale).
+4. **Machine Learning:** Unsupervised K-Means clustering (K=4) to validate heuristic boundaries.
+5. **Decision Science:** Synthesis of the data into an actionable, experiment-driven strategic framework and Markdown dashboard.
+
+## Data Cleaning
+The raw data was rigorously sanitized:
+*   Dropped rows with missing `CustomerID`s (as anonymous transactions cannot be tracked longitudinally).
+*   Removed cancelled orders (Invoice numbers starting with 'C').
+*   Filtered out corrupted negative quantities and zero-dollar unit prices.
+
+## SQL Analysis
+Calculations were pushed down to a SQLite database (`database/valuelens.db`) to simulate a production data warehouse. 
+*   **Recency:** Calculated relative to a dynamic snapshot date (`MAX(InvoiceDate) + 1 day`).
+*   **Frequency:** Count of distinct `InvoiceNo` to prevent inflating frequency from multi-item single-checkout baskets.
+*   **Monetary:** Sum of `Quantity * UnitPrice`.
+
+## RFM Scoring
+Customers were ranked on a strict 1-to-3 scale (1 = Worst, 3 = Best) utilizing the 33rd and 66th percentiles of the database to ensure mathematically even distributions.
+
+## Customer Segmentation
+RFM strings (e.g., '333') were mapped to actionable business segments:
+*   **Champions** (Recent, Frequent, High Spenders)
+*   **Loyal Customers** (Consistent Repeat Buyers)
+*   **Potential Loyalist** (Recent, but Low Frequency)
+*   **At Risk (High Value)** (High Spenders, but Decaying Recency)
+*   **Lost** (Dormant >6 Months, Low Value)
+
+## K-Means Validation
+To prevent heuristic bias, unsupervised K-Means Clustering was utilized as a secondary analytical validation layer.
+*   **Preprocessing:** `np.log1p` transformation was applied to compress extreme right-skewness (B2B "whales"), followed by Z-Score Standardization.
+*   **Selection:** K=4 was selected via Elbow Curve and Silhouette Score analysis.
+*   **Verdict:** While K-Means successfully proved the existence of the "Lost" tail and the massive "Whale" top-tier, it fatally blurred the line between Loyal and At Risk customers by ignoring the temporal context of Recency. The heuristic RFM rules proved superior for operational marketing.
+
+## Business Recommendations
+The analytics were translated into a formal **Decision Science Framework**:
+*   **Champions:** VIP treatment and early product access. *Cease all margin-eating discounts.*
+*   **Lost:** Suppress from all paid retargeting lists to protect Return on Ad Spend (ROAS).
+*   **At Risk:** Deploy aggressive (e.g., 30%) win-back discounts or human account manager outreach. Measure success strictly via a randomized Control Group to calculate true **Incrementality**.
+
+## Scenario Analysis
+The **"At Risk"** segment holds £545k in established revenue exposure across just 266 customers. Based on a conservative scenario model using the segment's median Average Order Value (£343), achieving a mere **5% reactivation rate** yields an estimated **£4,459** in rescued top-line revenue, completely avoiding the high Customer Acquisition Cost (CAC) of the open market.
+
+## Key Findings
+1.  **Extreme Concentration:** The Lorenz Curve proved that the Top 10% of customers are responsible for roughly 72% of all company revenue.
+2.  **The "Seasonal Spiker" Fallacy:** A temporal macro-analysis revealed extreme Q4 seasonality. A static RFM model will falsely flag a Q4-only holiday buyer as "At Risk" in August. Marketing must suppress these seasonal buyers from summer win-back campaigns to protect margin.
 
 ## Technology Stack
-- **Languages**: Python, SQL
-- **Database**: SQLite (for localized data querying and manipulation)
-- **Data Manipulation**: pandas, NumPy
-- **Machine Learning**: scikit-learn
-- **Data Visualization**: matplotlib, seaborn
-- **Reporting/Exporting**: openpyxl (Excel), python-pptx (PowerPoint)
-- **Development Environment**: Jupyter Notebooks
-
-## Environment Setup
-To run this project, it is recommended to use a virtual environment. Follow these steps to set up the environment and install dependencies:
-
-1. Clone the repository and navigate to the project directory:
-   ```bash
-   cd ValueLens
-   ```
-
-2. Create a virtual environment:
-   ```bash
-   python3 -m venv .venv
-   ```
-
-3. Activate the virtual environment:
-   - On macOS/Linux: `source .venv/bin/activate`
-   - On Windows: `.venv\Scripts\activate`
-
-4. Install the required dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## Data Ingestion
-To load and validate the raw dataset into the project, you can run the ingestion pipeline. This script verifies the dataset schema, normalizes column names, and checks that critical information like `invoicedate` can be properly parsed before any business logic or cleaning is applied.
-
-Run the pipeline from the project root:
-```bash
-python3 ingest.py
-```
-
-## Expected Outputs
-- A clean, reproducible data pipeline.
-- SQLite database containing processed analytical tables.
-- Jupyter notebooks detailing the EDA, segmentation, and modeling steps.
-- Python scripts modularizing the core logic (`src/`).
-- Exported data reports (Excel) highlighting key customer segments.
-- A final presentation slide deck outlining the business problem, methodology, insights, and strategic recommendations.
+*   **Language:** Python 3.9+
+*   **Data Processing:** Pandas, NumPy
+*   **Database:** SQLite3
+*   **Machine Learning:** Scikit-Learn
+*   **Visualization:** Matplotlib, Seaborn
+*   **Testing:** Pytest
 
 ## Project Structure
 ```text
-ValueLens/
+valuelens/
 ├── data/
-│   ├── raw/             # Raw, immutable data
-│   ├── processed/       # Cleaned and transformed data ready for analysis
-│   └── exports/         # Data exports for reporting (e.g., Excel files)
-├── database/            # SQLite database files
-├── notebooks/           # Jupyter notebooks for exploration and analysis
-├── src/                 # Python source code for data processing and modeling
-├── sql/                 # SQL scripts for data extraction and transformation
-├── tests/               # Unit tests for source code
-├── reports/             # Generated analysis reports
-├── presentation/        # Presentation materials (e.g., PPTX)
-├── requirements.txt     # Python dependencies
-├── README.md            # Project overview and instructions
-└── .gitignore           # Git ignored files and directories
+│   ├── raw/                 # Ignored by git
+│   └── processed/           # customer_360.csv and RFM outputs
+├── database/                # SQLite valuelens.db
+├── reports/                 # Strategic Markdown reports
+│   ├── dashboard/           # Final static Markdown dashboard
+│   ├── clustering/          # K-Means diagnostics
+│   └── figures/             # .png visualization assets
+├── sql/                     # Raw extraction queries
+├── src/                     # Python execution pipeline
+├── tests/                   # Pytest data quality validation suite
+└── run_pipeline.py          # Root-level execution orchestrator
 ```
+
+## How to Run
+This project is entirely reproducible from a clean environment. Simply run the root orchestrator:
+
+```bash
+# Ensure dependencies are installed (pandas, scikit-learn, matplotlib, seaborn, pytest)
+python run_pipeline.py
+```
+The script will automatically execute the 17-stage pipeline (skipping the 45MB download if the raw data exists), generate the SQLite database, train the K-Means cluster, calculate the statistics, and generate the final Executive Dashboard.
+
+## Testing
+The pipeline is protected by a dedicated `tests/` directory ensuring data integrity.
+```bash
+pytest tests/
+```
+The suite mathematically proves:
+*   Zero missing values or duplicates in the final `customer_360.csv` dataset.
+*   Perfect boundary calculations in the RFM algorithm.
+*   Data type consistency.
+
+## Limitations
+This analysis utilizes a **point-in-time, cross-sectional snapshot**. While this flawlessly identifies current financial exposure, the dataset cannot mathematically prove *longitudinal* transition rates (e.g., calculating the exact probability that a new customer will become a Champion within 12 months).
+
+## Future Improvements
+To track life-cycle movement probabilistically, the business must transition from a static snapshot architecture to a **recurring monthly snapshot** model. This would unlock the ability to build **Markov Chain** transition matrices to forecast long-term segment migration and Customer Lifetime Value (LTV).
