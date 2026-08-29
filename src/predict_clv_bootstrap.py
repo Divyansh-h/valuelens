@@ -4,16 +4,20 @@ import os
 import sys
 from lifetimes import BetaGeoFitter, GammaGammaFitter
 
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from logger import get_logger
+logger = get_logger("BootstrapCLV")
+
 def predict_clv_bootstrap():
     try:
-        print("--- ValueLens: Bootstrapping CLV Confidence Intervals ---")
+        logger.info("--- ValueLens: Bootstrapping CLV Confidence Intervals ---")
         
         # Paths
         processed_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "processed")
         summary_path = os.path.join(processed_dir, "lifetimes_summary.csv")
         master_path = os.path.join(processed_dir, "customer_rfm.csv")
         
-        print(f"Loading lifetimes summary from {summary_path}...")
+        logger.info(f"Loading lifetimes summary from {summary_path}...")
         summary = pd.read_csv(summary_path)
         
         # Customers with frequency > 0 for Gamma-Gamma
@@ -27,11 +31,11 @@ def predict_clv_bootstrap():
         # Matrix shape: (n_customers, n_bootstraps)
         predictions_matrix = np.zeros((n_customers, n_bootstraps))
         
-        print(f"Starting {n_bootstraps} bootstrap iterations. This may take a minute...")
+        logger.info(f"Starting {n_bootstraps} bootstrap iterations. This may take a minute...")
         
         for i in range(n_bootstraps):
             if (i+1) % 10 == 0:
-                print(f"  Completed {i+1}/{n_bootstraps} iterations...")
+                logger.info(f"  Completed {i+1}/{n_bootstraps} iterations...")
                 
             # 1. Sample with replacement
             boot_sample = summary.sample(n=n_customers, replace=True, random_state=i)
@@ -68,7 +72,7 @@ def predict_clv_bootstrap():
             # Fill NaN with 0 for non-returning customers
             predictions_matrix[:, i] = clv_preds.fillna(0).values
             
-        print("Bootstrap complete! Calculating percentiles...")
+        logger.info("Bootstrap complete! Calculating percentiles...")
         
         # Calculate 5th, 50th, and 95th percentiles (90% Confidence Interval)
         # Note: If some iterations failed, they will be 0, which could skew.
@@ -80,7 +84,7 @@ def predict_clv_bootstrap():
         summary['clv_median'] = np.percentile(valid_predictions, 50, axis=1)
         summary['clv_upper_90ci'] = np.percentile(valid_predictions, 95, axis=1)
         
-        print(f"Loading master customer table from {master_path}...")
+        logger.info(f"Loading master customer table from {master_path}...")
         master_df = pd.read_csv(master_path)
         
         # Merge new columns
@@ -97,22 +101,23 @@ def predict_clv_bootstrap():
         # Save updated master table
         master_df.to_csv(master_path, index=False)
         
-        print("\n[Confidence Interval Stats]")
+        logger.info("--- Confidence Interval Stats ---")
         master_df['ci_width'] = master_df['clv_upper_90ci'] - master_df['clv_lower_90ci']
-        print(master_df[['clv_lower_90ci', 'clv_median', 'clv_upper_90ci', 'ci_width']].describe().round(2))
+        logger.info(f"\n{master_df[['clv_lower_90ci', 'clv_median', 'clv_upper_90ci', 'ci_width']].describe().round(2)}")
         
-        print("\n[Sample High-Value Customer]")
+        logger.info("--- Sample High-Value Customer ---")
         whale = master_df.sort_values(by='clv_median', ascending=False).iloc[0]
-        print(f"Customer {whale['CustomerID']} ({whale['Segment']})")
-        print(f"Lower Bound (5th):  £{whale['clv_lower_90ci']:,.2f}")
-        print(f"Median CLV (50th):  £{whale['clv_median']:,.2f}")
-        print(f"Upper Bound (95th): £{whale['clv_upper_90ci']:,.2f}")
-        print(f"Interval Width:     £{whale['ci_width']:,.2f}")
+        logger.info(f"Customer {whale['CustomerID']} ({whale['Segment']})")
+        logger.info(f"Lower Bound (5th):  £{whale['clv_lower_90ci']:,.2f}")
+        logger.info(f"Median CLV (50th):  £{whale['clv_median']:,.2f}")
+        logger.info(f"Upper Bound (95th): £{whale['clv_upper_90ci']:,.2f}")
+        logger.info(f"Interval Width:     £{whale['ci_width']:,.2f}")
         
-        print(f"\n[Success] Bootstrap CI predictions saved to {master_path}")
+        logger.info(f"Success: Bootstrap CI predictions saved to {master_path}. Row count: {len(master_df)}")
+        
         
     except Exception as e:
-        print(f"\n[ERROR] Failed to run bootstrap: {e}", file=sys.stderr)
+        logger.error(f"Failed to run bootstrap: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

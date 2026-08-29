@@ -1,7 +1,12 @@
 import sqlite3
 import pandas as pd
 import os
+import sys
 import yaml
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from logger import get_logger
+logger = get_logger("CalculateRFM")
 
 def load_config():
     config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.yaml")
@@ -15,7 +20,7 @@ def calculate_rfm():
     sql_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "sql")
     export_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "processed", "customer_rfm.csv")
     
-    print(f"Connecting to database at {db_path}...")
+    logger.info(f"Connecting to database at {db_path}...")
     conn = sqlite3.connect(db_path)
     
     # Determine reference date
@@ -33,14 +38,14 @@ def calculate_rfm():
     lookback = config['pipeline']['lookback_window_in_months']
     quintiles = config['rfm']['number_of_quintiles']
     
-    print("Reading final longitudinal RFM calculation via SQL...")
+    logger.info("Reading final longitudinal RFM calculation via SQL...")
     # The views (stg_sales, int_monthly_snapshots, etc) are already created by run_pipeline.py
     
     with open(os.path.join(sql_dir, "marts", "mart_customer_rfm_scores_monthly.sql"), 'r') as f:
         mart_sql = f.read()
         mart_sql = mart_sql.replace('{NUM_QUINTILES}', str(quintiles))
     
-    print("Executing final longitudinal RFM calculation via SQL...")
+    logger.info("Executing final longitudinal RFM calculation via SQL...")
     df_rfm = pd.read_sql(mart_sql, conn)
     
     # Rename columns to match the requested clean analytical dataset format
@@ -58,7 +63,7 @@ def calculate_rfm():
     # Combine scores to form a traditional RFM Segment string (e.g. '555')
     df_rfm['RFM_Score'] = df_rfm['R_Score'].astype(str) + df_rfm['F_Score'].astype(str) + df_rfm['M_Score'].astype(str)
     
-    print(f"RFM analysis completed for {len(df_rfm)} customer-months.")
+    logger.info(f"RFM analysis completed. Row count: {len(df_rfm)} customer-months.")
     
     # Keep only the requested columns
     cols = ['CustomerID', 'Snapshot_Date', 'Recency', 'Frequency', 'Monetary', 'R_Score', 'F_Score', 'M_Score', 'RFM_Score']
@@ -66,7 +71,7 @@ def calculate_rfm():
     
     os.makedirs(os.path.dirname(export_path), exist_ok=True)
     df_rfm.to_csv(export_path, index=False)
-    print(f"Saved clean analytical dataset to {export_path}")
+    logger.info(f"Saved clean analytical dataset to {export_path}")
     
     conn.close()
     return df_rfm

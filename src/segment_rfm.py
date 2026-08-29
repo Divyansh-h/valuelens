@@ -1,6 +1,11 @@
 import pandas as pd
 import os
 import sys
+import yaml
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from logger import get_logger
+logger = get_logger("SegmentRFM")
 
 def assign_segment(row, num_quintiles):
     """
@@ -24,7 +29,7 @@ def assign_segment(row, num_quintiles):
     else:
         return 'Potential Loyalist'
 
-import yaml
+        return 'Potential Loyalist'
 
 def load_config():
     config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.yaml")
@@ -38,10 +43,10 @@ def run_segmentation():
         
         csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "processed", "customer_rfm.csv")
         
-        print(f"Loading RFM data from {csv_path}...")
+        logger.info(f"Loading RFM data from {csv_path}...")
         df = pd.read_csv(csv_path)
         
-        print("Applying business segmentation rules...")
+        logger.info(f"Applying business segmentation rules to {len(df)} rows...")
         # Apply function row by row
         df['Segment'] = df.apply(lambda row: assign_segment(row, num_quintiles), axis=1)
         
@@ -49,19 +54,19 @@ def run_segmentation():
         cols = ['CustomerID', 'Snapshot_Date', 'Recency', 'Frequency', 'Monetary', 'R_Score', 'F_Score', 'M_Score', 'RFM_Score', 'Segment']
         df = df[cols]
         
-        print(f"Saving segmented data back to {csv_path}...")
+        logger.info(f"Saving segmented data back to {csv_path}...")
         df.to_csv(csv_path, index=False)
         
-        print("\n--- Segmentation Summary ---")
+        logger.info("--- Segmentation Summary ---")
         counts = df['Segment'].value_counts()
         for segment, count in counts.items():
             pct = (count / len(df)) * 100
-            print(f"{segment:<25}: {count:>5} ({pct:>5.1f}%)")
+            logger.info(f"{segment:<25}: {count:>5} ({pct:>5.1f}%)")
             
-        print("\nSegmentation complete.")
+        logger.info("Segmentation complete.")
         
     except Exception as e:
-        print(f"\n[ERROR] Segmentation Pipeline Failed: {e}", file=sys.stderr)
+        logger.error(f"Segmentation Pipeline Failed: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

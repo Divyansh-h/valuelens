@@ -1,5 +1,11 @@
 import os
+import sys
 import pandas as pd
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from logger import get_logger
+logger = get_logger("CleanData")
+
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """
@@ -24,23 +30,28 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     
     # 1. Remove missing CustomerID
     df_clean = df_clean.dropna(subset=['customerid'])
+    logger.info(f"Row count after removing missing CustomerID: {len(df_clean)}")
     
     # 2. Exclude cancelled invoices (starts with C or c)
     is_cancelled = df_clean['invoiceno'].astype(str).str.startswith('C') | df_clean['invoiceno'].astype(str).str.startswith('c')
     df_clean = df_clean[~is_cancelled]
+    logger.info(f"Row count after removing cancelled invoices: {len(df_clean)}")
     
     # 3. Exclude Quantity <= 0
     df_clean = df_clean[df_clean['quantity'] > 0]
     
     # 4. Exclude UnitPrice <= 0
     df_clean = df_clean[df_clean['unitprice'] > 0]
+    logger.info(f"Row count after removing negative quantities/prices: {len(df_clean)}")
     
     # 5. Remove exact duplicate rows
     df_clean = df_clean.drop_duplicates()
+    logger.info(f"Row count after dropping duplicates: {len(df_clean)}")
     
     # 6. Remove Non-Product StockCodes (purely alphabetic)
     is_unusual = df_clean['stockcode'].astype(str).str.match('^[a-zA-Z]+$')
     df_clean = df_clean[~is_unusual]
+    logger.info(f"Row count after filtering unusual stock codes: {len(df_clean)}")
     
     # 7. Filter for United Kingdom only to maintain cohort homogeneity
     df_clean = df_clean[df_clean['country'] == 'United Kingdom']
@@ -108,7 +119,7 @@ def generate_summary(df_raw: pd.DataFrame, df_clean: pd.DataFrame) -> pd.DataFra
     return pd.DataFrame(summary)
 
 if __name__ == "__main__":
-    print("Loading raw data...")
+    logger.info("Loading raw data...")
     raw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "online_retail.csv")
     if not os.path.exists(raw_path):
         raw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "Online Retail.xlsx")
@@ -116,10 +127,13 @@ if __name__ == "__main__":
     else:
         df_raw = pd.read_csv(raw_path)
         
-    print("Cleaning data...")
+    # Standardize column names to lowercase
+    df_raw.columns = df_raw.columns.str.lower()
+        
+    logger.info("Cleaning data...")
     df_clean = clean_data(df_raw)
     
     out_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "interim", "cleaned_sales.csv")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     df_clean.to_csv(out_path, index=False)
-    print(f"Saved cleaned data to {out_path}")
+    logger.info(f"Saved cleaned data to {out_path}")

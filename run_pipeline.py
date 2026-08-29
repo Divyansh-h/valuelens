@@ -1,45 +1,43 @@
 import subprocess
 import os
 import sys
-
-def run_step(script_name, step_description):
-    """Executes a python script and handles errors."""
-    print(f"\n[{step_description}]")
-    print(f"Running {script_name}...")
-    
-    script_path = os.path.join("src", script_name)
-    if not os.path.exists(script_path):
-        print(f"❌ Error: Could not find script at {script_path}")
-        sys.exit(1)
-        
-    try:
-        # Run the script using the current python executable
-        result = subprocess.run(
-            [sys.executable, script_path],
-            check=True,
-            capture_output=True,
-            text=True
-        )
-        print(f"✅ Success: {script_name} completed.")
-        # Print the script's output to keep logging transparent
-        if result.stdout.strip():
-            print(f"   Output: {result.stdout.strip().split(chr(10))[-1]}") # print just last line to reduce noise
-    except subprocess.CalledProcessError as e:
-        print(f"❌ FATAL ERROR in {script_name}:")
-        if e.stdout:
-            print(e.stdout)
-        if e.stderr:
-            print(e.stderr)
-        print("Pipeline aborted.")
-        sys.exit(1)
-
 import time
 import sqlite3
 import yaml
 
+# Add current directory to path so we can import src modules easily
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from src.logger import get_logger
+
+logger = get_logger("Orchestrator")
+
+def run_step(script_name, step_description):
+    """Executes a python script and handles errors."""
+    logger.info(f"--- {step_description} ---")
+    logger.info(f"Running {script_name}...")
+    
+    script_path = os.path.join("src", script_name)
+    if not os.path.exists(script_path):
+        logger.error(f"Could not find script at {script_path}")
+        sys.exit(1)
+        
+    try:
+        # Run the script using the current python executable.
+        # We don't capture output here, so child scripts can stream their structured logs naturally.
+        subprocess.run(
+            [sys.executable, script_path],
+            check=True
+        )
+        logger.info(f"Success: {script_name} completed.")
+    except subprocess.CalledProcessError as e:
+        logger.error(f"FATAL ERROR in {script_name}. Pipeline aborted.")
+        sys.exit(1)
+
+
+
 def execute_sql_layer(conn, layer_name, sql_file, config):
     """Executes a SQL file, measures runtime, and logs row counts."""
-    print(f"\n[Executing SQL Layer: {layer_name}]")
+    logger.info(f"Executing SQL Layer: {layer_name}")
     start_time = time.time()
     
     with open(sql_file, 'r') as f:
@@ -66,18 +64,18 @@ def execute_sql_layer(conn, layer_name, sql_file, config):
     count = conn.execute(f"SELECT COUNT(*) FROM {view_name}").fetchone()[0]
     
     runtime = time.time() - start_time
-    print(f"✅ Success: Created view {view_name}")
-    print(f"   ⏱️ Runtime: {runtime:.2f} seconds")
-    print(f"   📊 Row Count: {count:,} rows")
+    logger.info(f"Success: Created view {view_name}")
+    logger.info(f"Runtime: {runtime:.2f} seconds")
+    logger.info(f"Row Count [SQL Stage: {layer_name}]: {count:,} rows")
 
 def load_config():
     with open("config.yaml", 'r') as f:
         return yaml.safe_load(f)
 
 def main():
-    print("=" * 60)
-    print("💎 ValueLens: End-to-End Execution Pipeline")
-    print("=" * 60)
+    logger.info("=" * 60)
+    logger.info("ValueLens: End-to-End Execution Pipeline")
+    logger.info("=" * 60)
     
     # 0. Data Quality Gate
     run_step("data_quality_audit.py", "Stage 0: Data Quality Audit Gate")
@@ -85,7 +83,7 @@ def main():
     # 1. Ingestion
     raw_data_path = os.path.join("data", "raw", "online_retail.csv")
     if os.path.exists(raw_data_path):
-        print("Raw dataset found. Skipping ingestion phase to prevent redundant downloading.")
+        logger.info("Raw dataset found. Skipping ingestion phase to prevent redundant downloading.")
     else:
         run_step("data_ingestion.py", "Stage 1: Data Ingestion")
         
@@ -96,7 +94,7 @@ def main():
     # 3. SQL Orchestration (Layers)
     config = load_config()
     db_path = os.path.join("database", "valuelens.db")
-    print(f"\n[Connecting to SQLite Database: {db_path}]")
+    logger.info(f"Connecting to SQLite Database: {db_path}")
     conn = sqlite3.connect(db_path)
     
     sql_dir = "sql"
@@ -133,11 +131,11 @@ def main():
     for script, description in pipeline:
         run_step(script, description)
         
-    print("\n" + "=" * 60)
-    print("🎉 PIPELINE COMPLETED SUCCESSFULLY")
-    print("=" * 60)
-    print("All datasets, SQL databases, ML clusters, and Markdown dashboards have been regenerated.")
-    print("Final analytical asset: reports/dashboard/ValueLens_Dashboard.md")
+    logger.info("=" * 60)
+    logger.info("PIPELINE COMPLETED SUCCESSFULLY")
+    logger.info("=" * 60)
+    logger.info("All datasets, SQL databases, ML clusters, and Markdown dashboards have been regenerated.")
+    logger.info("Final analytical asset: reports/dashboard/ValueLens_Dashboard.md")
 
 if __name__ == "__main__":
     main()
