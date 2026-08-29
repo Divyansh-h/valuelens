@@ -30,6 +30,21 @@ def load_data():
         else:
             df['clv_median'] = 0.0
             
+    # Load retention priority list to get rank
+    priority_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "outputs", "retention_priority_list.csv")
+    if os.path.exists(priority_path):
+        priority_df = pd.read_csv(priority_path)
+        # Drop duplicates if any
+        priority_df = priority_df.drop_duplicates(subset=['CustomerID'])
+        priority_df = priority_df.sort_values(by='Retention_Priority_Score', ascending=False)
+        priority_df['Retention_Priority_Rank'] = range(1, len(priority_df) + 1)
+        
+        # Merge rank and score into main df
+        df = df.merge(priority_df[['CustomerID', 'Retention_Priority_Score', 'Retention_Priority_Rank']], on='CustomerID', how='left')
+    else:
+        df['Retention_Priority_Score'] = np.nan
+        df['Retention_Priority_Rank'] = np.nan
+        
     return df
 
 df = load_data()
@@ -62,6 +77,39 @@ filtered_df = df[
 # --- MAIN DASHBOARD ---
 st.title("Customer Intelligence Dashboard")
 st.markdown("Explore historically clustered behavior vs probabilistically predicted future value.")
+
+# --- CUSTOMER LOOKUP ---
+st.subheader("Individual Customer Lookup")
+search_col, _ = st.columns([1, 2])
+search_id = search_col.text_input("Enter Customer ID:", "")
+
+if search_id:
+    try:
+        customer_id = int(search_id)
+        customer_data = df[df['CustomerID'] == customer_id]
+        
+        if not customer_data.empty:
+            cust = customer_data.iloc[0]
+            st.success(f"Found Customer {customer_id}!")
+            
+            # Display metrics
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("RFM Segment", cust['Segment'])
+            
+            rfm_string = f"R: {cust['Recency']} | F: {cust['Frequency']} | M: £{cust['Monetary']:,.0f}"
+            m2.metric("RFM Behaviors", rfm_string)
+            
+            m3.metric("Predicted 12M CLV", f"£{cust['clv_median']:,.0f}")
+            
+            rank_str = f"#{int(cust['Retention_Priority_Rank'])}" if pd.notnull(cust['Retention_Priority_Rank']) else "N/A"
+            m4.metric("Retention Priority Rank", rank_str)
+        else:
+            st.warning(f"Customer ID {customer_id} not found in the database.")
+    except ValueError:
+        if search_id.strip() != "":
+            st.error("Please enter a valid numeric Customer ID.")
+
+st.markdown("---")
 
 # --- SECTION 1: KPIs ---
 st.subheader("Segment Overview")
