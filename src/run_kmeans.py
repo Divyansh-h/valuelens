@@ -4,14 +4,22 @@ import sys
 from sklearn.cluster import KMeans
 from clustering import load_and_preprocess_rfm
 
+import yaml
+
+def load_config():
+    config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "config.yaml")
+    with open(config_path, 'r') as f:
+        return yaml.safe_load(f)
+
 def run_final_clustering():
     try:
+        config = load_config()
+        k = config['machine_learning']['k_clusters']
+        
         print("--- ValueLens: Phase 3 K-Means Execution ---")
         print("Loading and preprocessing RFM data (Log-Transform + StandardScaler)...")
         df, scaled_df, scaler = load_and_preprocess_rfm()
         
-        # We selected K=4 based on the Inertia Elbow and Silhouette analysis
-        k = 4
         print(f"Running K-Means clustering with K={k} (random_state=42, n_init=10)...")
         
         kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)

@@ -6,12 +6,12 @@ This dashboard is a lightweight, reproducible analytical report synthesized dyna
 
 | Metric | Value |
 | :--- | :--- |
-| **Total Customers** | 3,917 |
-| **Total Revenue** | £7,244,495.32 |
-| **Avg Customer Value** | £1,849.50 |
-| **Champions %** | 25.7% |
-| **At Risk Revenue** | £545,169.87 |
-| **Top 10% Revenue Share** | 59.6% |
+| **Total Customers** | 33,262 |
+| **Total Revenue** | £45,315,769.39 |
+| **Avg Customer Value** | £1,362.39 |
+| **Champions %** | 25.1% |
+| **At Risk Revenue** | £3,271,560.37 |
+| **Top 10% Revenue Share** | 58.2% |
 
 ---
 
@@ -33,7 +33,7 @@ While "Lost" customers dominate the headcount, the "Champions" segment holds the
 
 ## 4. Revenue Concentration
 
-The Lorenz curve demonstrates our exposure. The top 10% of customers generate nearly 60% of total revenue.
+The Lorenz curve demonstrates our exposure. The top 10% of customers generate nearly 58% of total revenue.
 
 ![Revenue Concentration](figures/04_revenue_concentration.png)
 
@@ -50,7 +50,7 @@ Visualizing the correlation between high Recency (low days) and massive Lifetime
 ## 6. Retention Opportunity & Scenario Analysis
 
 **Objective**: Rescue the "At Risk (High Value)" segment.
-**Risk**: £545,170 in capital exposure.
+**Risk**: £3,271,560 in capital exposure.
 
 The following model calculates the estimated top-line revenue recovered from a deep-discount win-back campaign, assuming it triggers a single transaction at the historical Median AOV of the segment. *(Note: This is a scenario analysis, not a guaranteed forecast).*
 

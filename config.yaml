@@ -1,0 +1,14 @@
+pipeline:
+  # The reference end date for snapshots ('dynamic' to auto-detect max date from data, or 'YYYY-MM-DD')
+  analysis_reference_date: 'dynamic'
+  
+  # How many rolling months of snapshots to generate prior to the reference date
+  lookback_window_in_months: 12
+
+rfm:
+  # The number of bins to split the RFM scores into (e.g., 5 = Quintiles)
+  number_of_quintiles: 5
+
+machine_learning:
+  # Number of clusters for K-Means execution
+  k_clusters: 4

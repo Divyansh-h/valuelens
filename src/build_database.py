@@ -82,3 +82,9 @@ The `valuelens.db` SQLite database has been successfully built and populated wit
     
     conn.close()
     print("Database build complete.")
+
+if __name__ == "__main__":
+    db_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "database", "valuelens.db")
+    csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "interim", "cleaned_sales.csv")
+    report_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports", "database_validation.md")
+    create_database(db_path, csv_path, report_path)

@@ -6,3 +6,4 @@ seaborn
 openpyxl
 python-pptx
 pytest
+pyyaml
