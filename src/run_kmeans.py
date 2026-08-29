@@ -17,16 +17,28 @@ def run_final_clustering():
         k = config['machine_learning']['k_clusters']
         
         print("--- ValueLens: Phase 3 K-Means Execution ---")
-        print("Loading and preprocessing RFM data (Log-Transform + StandardScaler)...")
-        df, scaled_df, scaler = load_and_preprocess_rfm()
+        print("Loading and preprocessing RFM data (Log-Transform)...")
+        df, rfm_log = load_and_preprocess_rfm()
         
-        print(f"Running K-Means clustering with K={k} (random_state=42, n_init=10)...")
+        from sklearn.model_selection import train_test_split
+        from sklearn.pipeline import Pipeline
+        from sklearn.preprocessing import StandardScaler
         
-        kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
-        kmeans.fit(scaled_df)
+        print("Splitting data to fit standardizer strictly on training data...")
+        X_train, X_test = train_test_split(rfm_log, test_size=0.2, random_state=42)
         
+        print(f"Building pipeline: StandardScaler -> KMeans(k={k})")
+        pipeline = Pipeline([
+            ('scaler', StandardScaler()),
+            ('kmeans', KMeans(n_clusters=k, random_state=42, n_init=10))
+        ])
+        
+        print("Fitting pipeline on training data...")
+        pipeline.fit(X_train)
+        
+        print("Predicting clusters across the entire dataset...")
         # Assign neutral cluster labels to preserve algorithmic purity before business interpretation
-        df['Cluster'] = [f"Cluster {label}" for label in kmeans.labels_]
+        df['Cluster'] = [f"Cluster {label}" for label in pipeline.predict(rfm_log)]
         
         # Ensure 'Cluster' is appended cleanly without losing any original metrics
         csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "processed", "customer_rfm.csv")

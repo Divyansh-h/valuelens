@@ -1,0 +1,5 @@
+Cluster,Customer_Count,Pct_of_Customers,Total_Revenue,Pct_of_Revenue,Recency_Mean,Recency_Median,Frequency_Mean,Frequency_Median,Monetary_Mean,Monetary_Median
+Cluster 0,9221,27.72,12486264.73,27.55,68.14,51.0,3.31,3.0,1354.11,1004.4
+Cluster 1,13521,40.65,3711243.44,8.19,132.85,111.0,1.17,1.0,274.48,241.09
+Cluster 2,4335,13.03,25967191.54,57.3,17.47,12.0,11.64,9.0,5990.12,3104.36
+Cluster 3,6185,18.59,3151069.68,6.95,12.53,12.0,1.76,1.0,509.47,403.61
