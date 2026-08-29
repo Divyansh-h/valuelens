@@ -106,3 +106,20 @@ def generate_summary(df_raw: pd.DataFrame, df_clean: pd.DataFrame) -> pd.DataFra
     }
     
     return pd.DataFrame(summary)
+
+if __name__ == "__main__":
+    print("Loading raw data...")
+    raw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "online_retail.csv")
+    if not os.path.exists(raw_path):
+        raw_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "raw", "Online Retail.xlsx")
+        df_raw = pd.read_excel(raw_path)
+    else:
+        df_raw = pd.read_csv(raw_path)
+        
+    print("Cleaning data...")
+    df_clean = clean_data(df_raw)
+    
+    out_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data", "interim", "cleaned_sales.csv")
+    os.makedirs(os.path.dirname(out_path), exist_ok=True)
+    df_clean.to_csv(out_path, index=False)
+    print(f"Saved cleaned data to {out_path}")

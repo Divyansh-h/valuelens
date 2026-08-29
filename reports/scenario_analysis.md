@@ -14,8 +14,8 @@ To estimate the value of that transaction, we use the **Median Average Order Val
 `Recovered Revenue = (Total "At Risk" Customers × Reactivation Rate) × Median AOV`
 
 **The Variables:**
-- Total "At Risk" Customers: **266**
-- Median AOV (At Risk Segment): **£343.01**
+- Total "At Risk" Customers: **2176**
+- Median AOV (At Risk Segment): **£303.40**
 
 ---
 
@@ -23,12 +23,12 @@ To estimate the value of that transaction, we use the **Median Average Order Val
 
 | Hypothetical Reactivation Rate | Reactivated Customers | Estimated Recovered Revenue |
 | :--- | :--- | :--- |
-| **5%** | 13 | £4,459.19 |
-| **10%** | 27 | £9,261.40 |
-| **15%** | 40 | £13,720.60 |
-| **20%** | 53 | £18,179.79 |
+| **5%** | 109 | £33,070.60 |
+| **10%** | 218 | £66,141.20 |
+| **15%** | 326 | £98,908.40 |
+| **20%** | 435 | £131,979.00 |
 
 *(A visual representation of this scenario analysis is saved at `reports/figures/08_reactivation_scenarios.png`)*
 
 ## Business Takeaway
-Even a highly conservative **5% reactivation rate** (recovering just 13 customers) yields an estimated **£4,459** in top-line revenue from a single transaction. Because these customers have proven historical buying habits, the marketing spend required to achieve a 5% conversion on this warm list is statistically far lower than attempting to acquire 13 entirely new customers on the open market.
+Even a highly conservative **5% reactivation rate** (recovering just 109 customers) yields an estimated **£33,071** in top-line revenue from a single transaction. Because these customers have proven historical buying habits, the marketing spend required to achieve a 5% conversion on this warm list is statistically far lower than attempting to acquire 109 entirely new customers on the open market.
