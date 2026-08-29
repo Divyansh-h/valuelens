@@ -1,118 +1,65 @@
-# ValueLens: Customer Segmentation & Retention Analytics
+# ValueLens: Predictive Customer Lifetime Value & Retention Analytics
 
-![Dashboard Preview](reports/dashboard/figures/01_segment_dist.png)
+![Revenue Concentration](reports/dashboard/figures/04_revenue_concentration.png)
 
-## Business Problem
-The business suffers from "spray-and-pray" marketing execution. Without a data-driven understanding of customer churn risk and lifetime value, the company wastes margin by offering blanket discounts to VIPs who would buy at full price, while simultaneously burning paid retargeting budgets on permanently churned accounts. The business requires a rigorous analytical framework to identify capital exposure and deploy marketing budget with maximum incremental ROI.
+## Problem
+The business historically suffered from "spray-and-pray" marketing execution. Relying solely on static, backward-looking heuristics like standard RFM (Recency, Frequency, Monetary) to dictate retention spend actively misallocated marketing budgets. Without a data-driven understanding of probabilistic churn risk and future customer lifetime value (CLV), the company wasted margin by offering blanket discounts to VIPs who would have bought at full price, while simultaneously burning paid retargeting budgets on permanently churned, low-value accounts. The business required a rigorous predictive analytical framework to identify capital exposure and deploy marketing budgets with maximum incremental ROI.
 
-## Why RFM?
-Demographics (age, gender, location) do not buy products; **behavior** does. Recency, Frequency, and Monetary (RFM) analysis is a mathematically robust heuristic that evaluates exact purchasing behavior. By understanding exactly when a customer last bought, how often they buy, and how much they spend, the business can accurately diagnose the customer's lifecycle state (e.g., active, at-risk, churned).
+## Data
+The project utilizes the widely referenced **UCI Online Retail Dataset**, representing a UK-based wholesale B2B retail company spanning December 2010 through December 2011. The raw dataset contains ~541,000 transaction rows. 
 
-## Key Questions
-1. How deeply is the company's revenue concentrated in its top buyers?
-2. Which historically valuable customers are actively slipping into churn?
-3. What is the financial exposure (capital at risk) if these customers are not rescued?
-4. How do we mathematically prove the ROI of a retention campaign using A/B testing?
+The raw data was rigorously sanitized to remove anonymous transactions, cancelled orders, corrupted negative quantities, and zero-dollar unit prices before being loaded into a local SQLite data warehouse for analytical modeling.
 
-## Dataset
-The project utilizes the widely referenced **UCI Online Retail Dataset**, representing a UK-based wholesale B2B retail company spanning December 2010 through December 2011. The raw dataset contains ~541,000 transaction rows.
+## Approach
+This project executes a professional, end-to-end Machine Learning pipeline combining foundational data engineering with probabilistic models:
 
-## Methodology
-This project executes a professional end-to-end Decision Science pipeline:
-1. **Data Engineering:** Automated ingestion, cleaning, and SQLite database creation.
-2. **SQL Analytics:** Fast, scalable extraction of raw Recency, Frequency, and Monetary metrics.
-3. **Statistical Scoring:** Percentile-based heuristic scoring (1-3 scale).
-4. **Machine Learning:** Unsupervised K-Means clustering (K=4) to validate heuristic boundaries.
-5. **Decision Science:** Synthesis of the data into an actionable, experiment-driven strategic framework and Markdown dashboard.
-
-## Data Cleaning
-The raw data was rigorously sanitized:
-*   Dropped rows with missing `CustomerID`s (as anonymous transactions cannot be tracked longitudinally).
-*   Removed cancelled orders (Invoice numbers starting with 'C').
-*   Filtered out corrupted negative quantities and zero-dollar unit prices.
-
-## SQL Analysis
-Calculations were pushed down to a SQLite database (`database/valuelens.db`) to simulate a production data warehouse. 
-*   **Recency:** Calculated relative to a dynamic snapshot date (`MAX(InvoiceDate) + 1 day`).
-*   **Frequency:** Count of distinct `InvoiceNo` to prevent inflating frequency from multi-item single-checkout baskets.
-*   **Monetary:** Sum of `Quantity * UnitPrice`.
-
-## RFM Scoring
-Customers were ranked on a strict 1-to-5 quintile scale (1 = Worst, 5 = Best) utilizing the `NTILE(5)` window function to ensure mathematically even distributions.
-
-## Customer Segmentation
-RFM strings (e.g., '333') were mapped to actionable business segments:
-*   **Champions** (Recent, Frequent, High Spenders)
-*   **Loyal Customers** (Consistent Repeat Buyers)
-*   **Potential Loyalist** (Recent, but Low Frequency)
-*   **At Risk (High Value)** (High Spenders, but Decaying Recency)
-*   **Lost** (Dormant >6 Months, Low Value)
-
-## K-Means Validation
-To prevent heuristic bias, unsupervised K-Means Clustering was utilized as a secondary analytical validation layer.
-*   **Preprocessing:** `np.log1p` transformation was applied to compress extreme right-skewness (B2B "whales"), followed by Z-Score Standardization.
-*   **Selection:** K=4 was selected via Elbow Curve and Silhouette Score analysis.
-*   **Verdict:** While K-Means successfully proved the existence of the "Lost" tail and the massive "Whale" top-tier, it fatally blurred the line between Loyal and At Risk customers by ignoring the temporal context of Recency. The heuristic RFM rules proved superior for operational marketing.
-
-## Business Recommendations
-The analytics were translated into a formal **Decision Science Framework**:
-*   **Champions:** VIP treatment and early product access. *Cease all margin-eating discounts.*
-*   **Lost:** Suppress from all paid retargeting lists to protect Return on Ad Spend (ROAS).
-*   **At Risk:** Deploy aggressive (e.g., 30%) win-back discounts or human account manager outreach. Measure success strictly via a randomized Control Group to calculate true **Incrementality**.
-
-## Scenario Analysis
-The **"At Risk"** segment holds £545k in established revenue exposure across just 266 customers. Based on a conservative scenario model using the segment's median Average Order Value (£343), achieving a mere **5% reactivation rate** yields an estimated **£4,459** in rescued top-line revenue, completely avoiding the high Customer Acquisition Cost (CAC) of the open market.
+1. **SQL Feature Extraction:** Fast, scalable extraction of longitudinal RFM metrics via SQLite.
+2. **Reusable ML Pipelines:** A custom, scikit-learn compatible `RFMSegmenter` class was engineered to calculate exact historical quintiles and segment users without data leakage.
+3. **Unsupervised Clustering:** K-Means clustering (K=4) to validate heuristic boundaries.
+4. **Probabilistic CLV Prediction:** Implementation of the **BetaGeo (BG/NBD)** and **Gamma-Gamma** models (`lifetimes` package) to mathematically predict the probability of churn and expected 12-month future spend for every individual customer.
+5. **Uncertainty Quantification:** A 100-iteration Bootstrap resampling simulation to generate 90% Confidence Intervals around individual CLV predictions.
+6. **Interactive Dashboard:** An accessible Streamlit application (`app.py`) for stakeholders to actively filter and investigate "Hidden Gems" in real time.
+7. **Automated Testing:** A rigorous Pytest End-to-End suite injecting synthetic customer archetypes to guarantee mathematical stability across the pipeline.
 
 ## Key Findings
-1.  **Extreme Concentration:** The Lorenz Curve proved that the Top 10% of customers are responsible for roughly 72% of all company revenue.
-2.  **The "Seasonal Spiker" Fallacy:** A temporal macro-analysis revealed extreme Q4 seasonality. A static RFM model will falsely flag a Q4-only holiday buyer as "At Risk" in August. Marketing must suppress these seasonal buyers from summer win-back campaigns to protect margin.
 
-## Technology Stack
-*   **Language:** Python 3.9+
-*   **Data Processing:** Pandas, NumPy
-*   **Database:** SQLite3
-*   **Machine Learning:** Scikit-Learn
-*   **Visualization:** Matplotlib, Seaborn
-*   **Testing:** Pytest
+![RFM Scatter Plot](reports/dashboard/figures/03_rfm_scatter.png)
 
-## Project Structure
-```text
-valuelens/
-├── data/
-│   ├── raw/                 # Ignored by git
-│   └── processed/           # customer_360.csv and RFM outputs
-├── database/                # SQLite valuelens.db
-├── reports/                 # Strategic Markdown reports
-│   ├── dashboard/           # Final static Markdown dashboard
-│   ├── clustering/          # K-Means diagnostics
-│   └── figures/             # .png visualization assets
-├── sql/                     # Raw extraction queries
-├── src/                     # Python execution pipeline
-├── tests/                   # Pytest data quality validation suite
-└── run_pipeline.py          # Root-level execution orchestrator
-```
+1. **The "Hidden Gem" Mismatch:** Static RFM rules labeled a significant portion of our database as "Lost" or "At Risk." However, the predictive CLV model projects that **720** of these specific customers actually belong in the **Top 25% (Top Quartile)** of future revenue generators due to their historically massive basket sizes. 
+2. **The Capital Exposure:** If marketing strictly adheres to the legacy RFM labels, they will abandon these 720 customers, risking approximately **£3.7 Million** in highly probable future revenue over the next 12 months.
+3. **The Seasonality Bias (False Champions):** We discovered **412 customers** who were labeled as highly-engaged "Champions," simply because they made a purchase in December. In reality, these are "Holiday-Only" shoppers. Sending retention offers to these seasonal buyers in Q1 is a waste of budget.
+
+## Business Recommendation
+
+To immediately capitalize on these findings, we recommend the following action plan:
+
+1. **Retire Standalone RFM Scoring:** Deprecate static RFM segments as the primary trigger for marketing campaigns. Migrate targeting to the new **Retention Priority Score**, which mathematically ranks a customer's flight risk against their predicted 12-Month CLV.
+2. **Launch "Operation Hidden Gem":** Launch an aggressive, targeted win-back campaign aimed exclusively at the 720 "Hidden Gem" customers with a psychological framing (e.g., "£50 VIP Credit on purchases over £200") to protect gross margins while encouraging large basket sizes.
+3. **Mandate the 10% Universal Holdout Group:** To definitively prove financial ROI, permanently firewall a random 10% of the targeted audience from receiving the VIP offer. Using a **Difference-in-Differences (DiD)** econometric model, compare the revenue generated by the 90% Treatment group against the natural baseline of the 10% Holdout group to mathematically prove true incremental revenue lift.
+
+## Limitations
+
+1. **Correlation vs Causation:** The findings linking specific RFM clusters to higher overall spend are fundamentally descriptive and correlational. While the BG/NBD models accurately forecast natural behavior, they *do not* prove that a specific marketing email *caused* a purchase. Causality can only be proven via strict Randomized Controlled Trials (like the recommended Holdout Group).
+2. **Point-in-Time Snapshot:** The current dashboard displays a cross-sectional snapshot of the database. While it perfectly identifies current financial exposure, predicting macro-level transitional states (e.g., Markov Chains to forecast the total % of the database that will become Champions next year) requires a slightly more complex longitudinal architecture.
 
 ## How to Run
-This project is entirely reproducible from a clean environment. Simply run the root orchestrator:
 
+This project is entirely reproducible and strictly managed via a pinned `requirements.txt` environment. 
+
+### 1. Execute the Pipeline
+Run the root orchestrator to download the data, calculate the ML models, simulate the bootstraps, and output the final datasets:
 ```bash
-# Ensure dependencies are installed (pandas, scikit-learn, matplotlib, seaborn, pytest)
 python run_pipeline.py
 ```
-The script will automatically execute the 17-stage pipeline (skipping the 45MB download if the raw data exists), generate the SQLite database, train the K-Means cluster, calculate the statistics, and generate the final Executive Dashboard.
 
-## Testing
-The pipeline is protected by a dedicated `tests/` directory ensuring data integrity.
+### 2. Launch the Interactive Dashboard
+To launch the stakeholder-facing Streamlit application:
+```bash
+streamlit run app.py
+```
+
+### 3. Run the E2E Test Suite
+To run the automated synthetic data tests:
 ```bash
 pytest tests/
 ```
-The suite mathematically proves:
-*   Zero missing values or duplicates in the final `customer_360.csv` dataset.
-*   Perfect boundary calculations in the RFM algorithm.
-*   Data type consistency.
-
-## Limitations
-This analysis utilizes a **point-in-time, cross-sectional snapshot**. While this flawlessly identifies current financial exposure, the dataset cannot mathematically prove *longitudinal* transition rates (e.g., calculating the exact probability that a new customer will become a Champion within 12 months).
-
-## Future Improvements
-To track life-cycle movement probabilistically, the business must transition from a static snapshot architecture to a **recurring monthly snapshot** model. This would unlock the ability to build **Markov Chain** transition matrices to forecast long-term segment migration and Customer Lifetime Value (LTV).
